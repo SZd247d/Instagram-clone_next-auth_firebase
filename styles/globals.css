@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .link {
+    @apply cursor-pointer hover:underline;
+  }
+  .btn {
+    @apply rounded-md bg-[#f8f9fa] p-3 text-sm text-gray-800 ring-gray-200 hover:shadow-md hover:ring-1 focus:outline-none active:ring-gray-300;
+  }
+  .navBtn {
+    @apply hidden h-6 transform cursor-pointer transition-all duration-150 ease-out hover:scale-125 md:inline-flex;
+  }
+}
