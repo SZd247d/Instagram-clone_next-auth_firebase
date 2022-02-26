@@ -1,23 +1,22 @@
 import Head from 'next/head'
 import Feed from '../components/Feed'
 import Header from '../components/Header'
+import Modal from '../components/Modal'
 
 function index() {
   return (
-    <div className="">
+    <div className="h-screen overflow-y-scroll bg-slate-50 scrollbar-hide">
       <Head>
         <title>Instagram Clone</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div
-        className="
-      -slate-200 h-screen"
-      >
+      <div>
         {/* Header */}
         <Header />
         {/* Feed */}
         <Feed />
         {/* Modal */}
+        <Modal />
       </div>
     </div>
   )
