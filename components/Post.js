@@ -8,14 +8,79 @@ import {
 } from '@heroicons/react/outline'
 import { HeartIcon as HeartIconFilled } from '@heroicons/react/solid'
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore'
 import { db } from '../firebase'
+import Moment from 'react-moment'
 
 function Post({ id, username, caption, image, userImage }) {
   const { data: session } = useSession()
   const [comments, setComments] = useState([])
   const [comment, setComment] = useState('')
+  const [likes, setLikes] = useState([])
+  const [hasLiked, setHasLiked] = useState(false)
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, 'posts', id, 'comments'),
+        orderBy('timestamp', 'desc')
+      ),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+
+        setComments(data)
+      }
+    )
+    return () => unsubscribe()
+  }, [db, id])
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'posts', id, 'likes'),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+
+        setLikes(data)
+      }
+    )
+    return () => unsubscribe()
+  }, [db, id])
+
+  useEffect(
+    () =>
+      setHasLiked(
+        likes.findIndex((like) => like.id === session.user.uid) !== -1
+      ),
+    [likes]
+  )
+
+  const likePost = async () => {
+    if (hasLiked) {
+      await deleteDoc(doc(db, 'posts', id, 'likes', session.user.uid))
+    } else {
+      await setDoc(doc(db, 'posts', id, 'likes', session.user.uid), {
+        timestamp: serverTimestamp(),
+        username: session.user.name,
+      })
+    }
+  }
 
   const sendComment = async (e) => {
     e.preventDefault()
@@ -52,7 +117,15 @@ function Post({ id, username, caption, image, userImage }) {
       {session && (
         <div className="flex justify-between px-4 pt-4">
           <div className="flex space-x-4 ">
-            <HeartIcon className="Btn" />
+            {hasLiked ? (
+              <HeartIconFilled
+                onClick={likePost}
+                className="Btn text-red-500"
+              />
+            ) : (
+              <HeartIcon onClick={likePost} className="Btn" />
+            )}
+
             <ChatIcon className="Btn" />
             <PaperAirplaneIcon className="Btn" />
           </div>
@@ -63,10 +136,33 @@ function Post({ id, username, caption, image, userImage }) {
       {/* Caption */}
 
       <p className="truncate p-5 text-sm text-gray-600">
+        {likes.length > 0 && (
+          <p className="mr-1 font-bold">{likes.length} likes </p>
+        )}
         <span className="mr-1 font-bold">{username}</span> {caption}
       </p>
 
       {/* Comments */}
+      {comments.length > 0 && (
+        <div className="ml-10 h-20 overflow-y-scroll scrollbar-thin scrollbar-thumb-black">
+          {comments.map((comment) => (
+            <div key={comment.id} className="mb-3 flex items-center space-x-2 ">
+              <img
+                className="h-7 space-x-4 rounded-full"
+                src={comment.userImage}
+                alt=""
+              />
+              <p className="flex-1 text-sm">
+                <span className="font-bold">{comment.username} </span>
+                {comment.comment}
+              </p>
+              <Moment fromNow className="pr-5 text-xs">
+                {comment.timestamp?.toDate()}
+              </Moment>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Input Field */}
       {session && (
